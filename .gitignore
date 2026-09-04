@@ -1,0 +1,22 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+
+# Node / React
+node_modules/
+dist/
+.vite/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Editor
+.idea/
+*.log
+
+# Superpowers scratch (git-ignored per-plan workspaces)
+.superpowers/
