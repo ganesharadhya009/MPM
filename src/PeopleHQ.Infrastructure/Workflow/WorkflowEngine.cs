@@ -24,8 +24,15 @@ public class WorkflowEngine : IWorkflowEngine
     private readonly AppDbContext _db;
     private readonly ITenantContext _tenant;
     private readonly IPublisher _publisher;
+    private readonly INotificationService _notificationService;
 
-    public WorkflowEngine(AppDbContext db, ITenantContext tenant, IPublisher publisher) { _db = db; _tenant = tenant; _publisher = publisher; }
+    public WorkflowEngine(AppDbContext db, ITenantContext tenant, IPublisher publisher, INotificationService notificationService)
+    {
+        _db = db;
+        _tenant = tenant;
+        _publisher = publisher;
+        _notificationService = notificationService;
+    }
 
     public async Task<Guid> SubmitAsync(WorkflowRequestType requestType, Guid requesterEmployeeId, object payload, CancellationToken ct = default)
     {
@@ -69,6 +76,8 @@ public class WorkflowEngine : IWorkflowEngine
         await _db.SaveChangesAsync(ct);
         if (autoApproved)
             await _publisher.Publish(new WorkflowRequestResolvedNotification(request.Id, request.RequestType, request.Status), ct);
+        else
+            await NotifyApproverAsync(chain[0], request.RequestType, ct);
         return request.Id;
     }
 
@@ -101,6 +110,8 @@ public class WorkflowEngine : IWorkflowEngine
         await _db.SaveChangesAsync(ct);
         if (resolved)
             await _publisher.Publish(new WorkflowRequestResolvedNotification(request.Id, request.RequestType, request.Status), ct);
+        else if (nextStep is not null)
+            await NotifyApproverAsync(nextStep.ApproverEmployeeId, request.RequestType, ct);
     }
 
     public async Task RejectCurrentStepAsync(Guid workflowRequestId, Guid actingEmployeeId, string? comment, CancellationToken ct = default)
@@ -185,6 +196,10 @@ public class WorkflowEngine : IWorkflowEngine
         }
         return chain;
     }
+
+    private Task NotifyApproverAsync(Guid approverEmployeeId, WorkflowRequestType requestType, CancellationToken ct)
+        => _notificationService.NotifyAsync(approverEmployeeId, "workflow.approval",
+            "New approval request", $"A {requestType} request is waiting for your approval.", ct: ct);
 
     private static string? ParseApproverType(string ruleJson)
     {
