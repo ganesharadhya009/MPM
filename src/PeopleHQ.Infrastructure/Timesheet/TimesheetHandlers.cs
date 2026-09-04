@@ -159,11 +159,16 @@ public class CreateTimesheetCommandHandler : IRequestHandler<CreateTimesheetComm
 public class AddTimesheetEntryCommandHandler : IRequestHandler<AddTimesheetEntryCommand, Guid>
 {
     private readonly AppDbContext _db;
-    public AddTimesheetEntryCommandHandler(AppDbContext db) => _db = db;
+    private readonly ICurrentEmployeeResolver _employeeResolver;
+    public AddTimesheetEntryCommandHandler(AppDbContext db, ICurrentEmployeeResolver employeeResolver) { _db = db; _employeeResolver = employeeResolver; }
 
     public async Task<Guid> Handle(AddTimesheetEntryCommand request, CancellationToken ct)
     {
         var timesheet = await _db.Timesheets.FindAsync(new object[] { request.TimesheetId }, ct) ?? throw new NotFoundException(nameof(Domain.Timesheet.Timesheet), request.TimesheetId);
+        // timesheet.write is granted broadly (every Employee holds it for their own timesheet) — without this
+        // check any employee could add entries to another employee's timesheet by guessing/enumerating its id.
+        var callerEmployeeId = await _employeeResolver.GetCurrentEmployeeIdAsync(ct);
+        if (timesheet.EmployeeId != callerEmployeeId) throw new ForbiddenException("You can only add entries to your own timesheet.");
         if (timesheet.Status != TimesheetStatus.Draft) throw new ConflictException("Entries can only be added while the timesheet is in Draft.");
         if (request.WorkDate < timesheet.PeriodStart || request.WorkDate > timesheet.PeriodEnd)
             throw new ValidationException(nameof(request.WorkDate), "Work date must fall within the timesheet's period.");
@@ -182,12 +187,15 @@ public class AddTimesheetEntryCommandHandler : IRequestHandler<AddTimesheetEntry
 public class UpdateTimesheetEntryCommandHandler : IRequestHandler<UpdateTimesheetEntryCommand>
 {
     private readonly AppDbContext _db;
-    public UpdateTimesheetEntryCommandHandler(AppDbContext db) => _db = db;
+    private readonly ICurrentEmployeeResolver _employeeResolver;
+    public UpdateTimesheetEntryCommandHandler(AppDbContext db, ICurrentEmployeeResolver employeeResolver) { _db = db; _employeeResolver = employeeResolver; }
 
     public async Task Handle(UpdateTimesheetEntryCommand request, CancellationToken ct)
     {
         var entry = await _db.TimesheetEntries.FindAsync(new object[] { request.Id }, ct) ?? throw new NotFoundException(nameof(TimesheetEntry), request.Id);
         var timesheet = await _db.Timesheets.FindAsync(new object[] { entry.TimesheetId }, ct);
+        var callerEmployeeId = await _employeeResolver.GetCurrentEmployeeIdAsync(ct);
+        if (timesheet?.EmployeeId != callerEmployeeId) throw new ForbiddenException("You can only edit entries on your own timesheet.");
         if (timesheet?.Status != TimesheetStatus.Draft) throw new ConflictException("Entries can only be edited while the timesheet is in Draft.");
 
         entry.WorkDate = request.WorkDate; entry.ProjectId = request.ProjectId; entry.TaskId = request.TaskId;
@@ -199,12 +207,15 @@ public class UpdateTimesheetEntryCommandHandler : IRequestHandler<UpdateTimeshee
 public class DeleteTimesheetEntryCommandHandler : IRequestHandler<DeleteTimesheetEntryCommand>
 {
     private readonly AppDbContext _db;
-    public DeleteTimesheetEntryCommandHandler(AppDbContext db) => _db = db;
+    private readonly ICurrentEmployeeResolver _employeeResolver;
+    public DeleteTimesheetEntryCommandHandler(AppDbContext db, ICurrentEmployeeResolver employeeResolver) { _db = db; _employeeResolver = employeeResolver; }
 
     public async Task Handle(DeleteTimesheetEntryCommand request, CancellationToken ct)
     {
         var entry = await _db.TimesheetEntries.FindAsync(new object[] { request.Id }, ct) ?? throw new NotFoundException(nameof(TimesheetEntry), request.Id);
         var timesheet = await _db.Timesheets.FindAsync(new object[] { entry.TimesheetId }, ct);
+        var callerEmployeeId = await _employeeResolver.GetCurrentEmployeeIdAsync(ct);
+        if (timesheet?.EmployeeId != callerEmployeeId) throw new ForbiddenException("You can only remove entries from your own timesheet.");
         if (timesheet?.Status != TimesheetStatus.Draft) throw new ConflictException("Entries can only be removed while the timesheet is in Draft.");
 
         _db.TimesheetEntries.Remove(entry);
@@ -224,12 +235,12 @@ public class SubmitTimesheetCommandHandler : IRequestHandler<SubmitTimesheetComm
     public async Task Handle(SubmitTimesheetCommand request, CancellationToken ct)
     {
         var timesheet = await _db.Timesheets.FindAsync(new object[] { request.TimesheetId }, ct) ?? throw new NotFoundException(nameof(Domain.Timesheet.Timesheet), request.TimesheetId);
+        var employeeId = await _employeeResolver.GetCurrentEmployeeIdAsync(ct);
+        if (timesheet.EmployeeId != employeeId) throw new ForbiddenException("You can only submit your own timesheet.");
         if (timesheet.Status != TimesheetStatus.Draft) throw new ConflictException("Only a Draft timesheet can be submitted.");
 
         var hasEntries = await _db.TimesheetEntries.AnyAsync(e => e.TimesheetId == timesheet.Id, ct);
         if (!hasEntries) throw new ValidationException(nameof(request.TimesheetId), "Cannot submit a timesheet with no entries.");
-
-        var employeeId = await _employeeResolver.GetCurrentEmployeeIdAsync(ct);
         var totalHours = await _db.TimesheetEntries.Where(e => e.TimesheetId == timesheet.Id).SumAsync(e => e.Hours, ct);
 
         timesheet.Status = TimesheetStatus.Submitted;

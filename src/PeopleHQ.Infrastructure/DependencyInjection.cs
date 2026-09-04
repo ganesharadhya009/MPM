@@ -5,11 +5,13 @@ using Microsoft.Extensions.DependencyInjection;
 using PeopleHQ.Application.Auth.Interfaces;
 using PeopleHQ.Application.Common.Interfaces;
 using PeopleHQ.Domain.Identity;
+using PeopleHQ.Application.Payroll;
 using PeopleHQ.Application.Workflow;
 using PeopleHQ.Infrastructure.Auditing;
 using PeopleHQ.Infrastructure.Common;
 using PeopleHQ.Infrastructure.Employees;
 using PeopleHQ.Infrastructure.Identity;
+using PeopleHQ.Infrastructure.Payroll;
 using PeopleHQ.Infrastructure.Persistence;
 using PeopleHQ.Infrastructure.Tenancy;
 using PeopleHQ.Infrastructure.Workflow;
@@ -44,6 +46,7 @@ public static class DependencyInjection
         services.AddScoped<ICurrentEmployeeResolver, CurrentEmployeeResolver>();
         services.AddScoped<IPermissionChecker, PermissionChecker>();
         services.AddScoped<IWorkflowEngine, WorkflowEngine>();
+        services.AddScoped<IStatutoryCalculator, IndiaStatutoryCalculator>();
 
         // MediatR scans both Application (command/query contracts) and Infrastructure
         // (handlers) assemblies — see the note in PeopleHQ.Application.DependencyInjection.
