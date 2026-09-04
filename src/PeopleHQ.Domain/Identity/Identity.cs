@@ -80,7 +80,9 @@ public static class Permissions
     // Onboarding
     public const string CandidateRead = "candidate.read";
     public const string CandidateWrite = "candidate.write";
+    public const string OnboardingTemplateRead = "onboarding.template.read";
     public const string OnboardingTemplateWrite = "onboarding.template.write";
+    public const string OnboardingTaskRead = "onboarding.task.read";
     public const string OnboardingTaskWrite = "onboarding.task.write";
 
     // Attendance

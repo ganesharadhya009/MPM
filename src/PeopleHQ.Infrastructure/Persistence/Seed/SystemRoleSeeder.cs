@@ -17,7 +17,9 @@ public static class SystemRoleSeeder
             Permissions.OrgChartRead,
             Permissions.EmployeeRead, Permissions.EmployeeWrite, Permissions.EmployeeDocumentWrite,
             Permissions.UserInvite, Permissions.UserManage, Permissions.RoleManage,
-            Permissions.CandidateRead, Permissions.CandidateWrite, Permissions.OnboardingTemplateWrite, Permissions.OnboardingTaskWrite,
+            Permissions.CandidateRead, Permissions.CandidateWrite,
+            Permissions.OnboardingTemplateRead, Permissions.OnboardingTemplateWrite,
+            Permissions.OnboardingTaskRead, Permissions.OnboardingTaskWrite,
             Permissions.AttendanceRead, Permissions.ShiftWrite, Permissions.RegularizationApprove,
             Permissions.LeaveTypeWrite, Permissions.LeavePolicyWrite, Permissions.LeaveApprove, Permissions.LeaveRead,
             Permissions.ProjectWrite, Permissions.TimesheetApprove, Permissions.TimesheetRead,
@@ -48,7 +50,11 @@ public static class SystemRoleSeeder
             Permissions.GoalWrite, Permissions.FeedbackWrite,
             Permissions.NotificationRead,
         },
-        ["Recruiter"] = new[] { Permissions.EmployeeRead, Permissions.CandidateRead, Permissions.CandidateWrite },
+        ["Recruiter"] = new[]
+        {
+            Permissions.EmployeeRead, Permissions.CandidateRead, Permissions.CandidateWrite,
+            Permissions.OnboardingTemplateRead, Permissions.OnboardingTaskRead, Permissions.OnboardingTaskWrite,
+        },
     };
 
     public static async Task SeedForTenantAsync(AppDbContext db, Guid tenantId, CancellationToken ct = default)
