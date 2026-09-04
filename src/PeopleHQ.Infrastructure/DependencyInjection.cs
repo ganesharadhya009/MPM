@@ -6,6 +6,7 @@ using PeopleHQ.Application.Auth.Interfaces;
 using PeopleHQ.Application.Common.Interfaces;
 using PeopleHQ.Domain.Identity;
 using PeopleHQ.Infrastructure.Auditing;
+using PeopleHQ.Infrastructure.Employees;
 using PeopleHQ.Infrastructure.Identity;
 using PeopleHQ.Infrastructure.Persistence;
 using PeopleHQ.Infrastructure.Tenancy;
@@ -36,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<ITotpService, TotpService>();
         services.AddScoped<IAuditLogWriter, AuditLogWriter>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<IManagerCycleValidator, ManagerCycleValidator>();
 
         // MediatR scans both Application (command/query contracts) and Infrastructure
         // (handlers) assemblies — see the note in PeopleHQ.Application.DependencyInjection.
