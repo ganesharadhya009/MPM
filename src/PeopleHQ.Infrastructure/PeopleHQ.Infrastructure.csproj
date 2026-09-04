@@ -4,6 +4,13 @@
     <ProjectReference Include="..\PeopleHQ.Application\PeopleHQ.Application.csproj" />
   </ItemGroup>
 
+  <!-- Needed for Microsoft.AspNetCore.Http types (HttpContext, RequestDelegate, IHttpContextAccessor)
+       used by TenantResolutionMiddleware and CurrentUserService — class libraries don't get the ASP.NET
+       Core shared framework by default. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
@@ -12,6 +19,8 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.10" />
+    <PackageReference Include="Otp.NET" Version="1.4.0" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.1.2" />
   </ItemGroup>
 
   <PropertyGroup>
