@@ -30,6 +30,7 @@ public static class SystemRoleSeeder
             Permissions.ReportRead, Permissions.AuditLogRead,
             Permissions.SurveyWrite, Permissions.AssetWrite, Permissions.HelpdeskTicketWrite, Permissions.AnnouncementWrite,
             Permissions.CustomFieldDefinitionWrite, Permissions.CustomFieldValueWrite, Permissions.BulkImportWrite,
+            Permissions.OkrCycleWrite,
         },
         ["Manager"] = new[]
         {
@@ -37,7 +38,7 @@ public static class SystemRoleSeeder
             Permissions.AttendanceCheckInOut, Permissions.AttendanceRead, Permissions.RegularizationApprove,
             Permissions.LeaveApply, Permissions.LeaveApprove, Permissions.LeaveRead,
             Permissions.TimesheetWrite, Permissions.TimesheetApprove, Permissions.TimesheetRead,
-            Permissions.GoalWrite, Permissions.FeedbackWrite,
+            Permissions.GoalWrite, Permissions.OkrWrite, Permissions.FeedbackWrite,
             Permissions.WorkflowApprove, Permissions.DelegationWrite,
             Permissions.NotificationRead, Permissions.PayslipReadOwn,
             Permissions.HrProcessRequestWrite,
@@ -49,7 +50,7 @@ public static class SystemRoleSeeder
             Permissions.LeaveApply, Permissions.LeaveRead,
             Permissions.TimesheetWrite,
             Permissions.InvestmentDeclarationWrite, Permissions.PayslipReadOwn,
-            Permissions.GoalWrite, Permissions.FeedbackWrite,
+            Permissions.GoalWrite, Permissions.OkrWrite, Permissions.FeedbackWrite,
             Permissions.NotificationRead,
             Permissions.HrProcessRequestWrite,
         },

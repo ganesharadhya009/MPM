@@ -144,4 +144,7 @@ public static class Permissions
     public const string CustomFieldDefinitionWrite = "customfield.definition.write";
     public const string CustomFieldValueWrite = "customfield.value.write";
     public const string BulkImportWrite = "bulkimport.write";
+
+    // Phase 3: OKR cycle administration (Objective/KeyResult self-service reuses OkrWrite above)
+    public const string OkrCycleWrite = "okrcycle.write";
 }
