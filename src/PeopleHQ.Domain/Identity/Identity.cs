@@ -138,4 +138,10 @@ public static class Permissions
     public const string AssetWrite = "asset.write";
     public const string HelpdeskTicketWrite = "helpdeskticket.write";
     public const string AnnouncementWrite = "announcement.write";
+
+    // Phase 2: HR Process requests, Custom Fields, Bulk Import
+    public const string HrProcessRequestWrite = "hrprocess.write";
+    public const string CustomFieldDefinitionWrite = "customfield.definition.write";
+    public const string CustomFieldValueWrite = "customfield.value.write";
+    public const string BulkImportWrite = "bulkimport.write";
 }

@@ -29,6 +29,7 @@ public static class SystemRoleSeeder
             Permissions.WorkflowApprove, Permissions.WorkflowChainRuleWrite,
             Permissions.ReportRead, Permissions.AuditLogRead,
             Permissions.SurveyWrite, Permissions.AssetWrite, Permissions.HelpdeskTicketWrite, Permissions.AnnouncementWrite,
+            Permissions.CustomFieldDefinitionWrite, Permissions.CustomFieldValueWrite, Permissions.BulkImportWrite,
         },
         ["Manager"] = new[]
         {
@@ -39,6 +40,7 @@ public static class SystemRoleSeeder
             Permissions.GoalWrite, Permissions.FeedbackWrite,
             Permissions.WorkflowApprove, Permissions.DelegationWrite,
             Permissions.NotificationRead, Permissions.PayslipReadOwn,
+            Permissions.HrProcessRequestWrite,
         },
         ["Employee"] = new[]
         {
@@ -49,6 +51,7 @@ public static class SystemRoleSeeder
             Permissions.InvestmentDeclarationWrite, Permissions.PayslipReadOwn,
             Permissions.GoalWrite, Permissions.FeedbackWrite,
             Permissions.NotificationRead,
+            Permissions.HrProcessRequestWrite,
         },
         ["Recruiter"] = new[]
         {
