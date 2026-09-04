@@ -160,10 +160,19 @@ public class AssignLeavePolicyCommandHandler : IRequestHandler<AssignLeavePolicy
 public class GetLeaveBalancesQueryHandler : IRequestHandler<GetLeaveBalancesQuery, IReadOnlyList<LeaveBalanceDto>>
 {
     private readonly AppDbContext _db;
-    public GetLeaveBalancesQueryHandler(AppDbContext db) => _db = db;
+    private readonly ICurrentEmployeeResolver _employeeResolver;
+    private readonly IPermissionChecker _permissionChecker;
+    public GetLeaveBalancesQueryHandler(AppDbContext db, ICurrentEmployeeResolver employeeResolver, IPermissionChecker permissionChecker)
+    { _db = db; _employeeResolver = employeeResolver; _permissionChecker = permissionChecker; }
 
     public async Task<IReadOnlyList<LeaveBalanceDto>> Handle(GetLeaveBalancesQuery request, CancellationToken ct)
     {
+        // leave.read is also granted to the plain Employee role for self-service; without this check any
+        // authenticated employee could pass another employee's id and read their balance (IDOR).
+        var callerEmployeeId = await _employeeResolver.GetCurrentEmployeeIdAsync(ct);
+        if (request.EmployeeId != callerEmployeeId && !_permissionChecker.HasPermission(Domain.Identity.Permissions.LeaveApprove))
+            throw new ForbiddenException("You can only view your own leave balance.");
+
         var leaveTypes = await _db.LeaveTypes.ToListAsync(ct);
         var balances = await _db.LeaveBalances.Where(b => b.EmployeeId == request.EmployeeId && b.Year == request.Year).ToListAsync(ct);
         var balanceByType = balances.ToDictionary(b => b.LeaveTypeId);
@@ -235,12 +244,25 @@ public class ApplyLeaveCommandHandler : IRequestHandler<ApplyLeaveCommand, Guid>
 public class GetLeaveRequestsQueryHandler : IRequestHandler<GetLeaveRequestsQuery, IReadOnlyList<LeaveRequestDto>>
 {
     private readonly AppDbContext _db;
-    public GetLeaveRequestsQueryHandler(AppDbContext db) => _db = db;
+    private readonly ICurrentEmployeeResolver _employeeResolver;
+    private readonly IPermissionChecker _permissionChecker;
+    public GetLeaveRequestsQueryHandler(AppDbContext db, ICurrentEmployeeResolver employeeResolver, IPermissionChecker permissionChecker)
+    { _db = db; _employeeResolver = employeeResolver; _permissionChecker = permissionChecker; }
 
     public async Task<IReadOnlyList<LeaveRequestDto>> Handle(GetLeaveRequestsQuery request, CancellationToken ct)
     {
+        // leave.read is also granted to the plain Employee role for self-service; without this check any
+        // authenticated employee could pass another employee's id (or omit it to see everyone) and read
+        // others' leave history (IDOR). A caller without leave.approve is always scoped to their own records;
+        // one with it may query any employee or, with EmployeeId omitted, every employee's requests.
+        var callerEmployeeId = await _employeeResolver.GetCurrentEmployeeIdAsync(ct);
+        var canViewOthers = _permissionChecker.HasPermission(Domain.Identity.Permissions.LeaveApprove);
+        if (!canViewOthers && request.EmployeeId is not null && request.EmployeeId != callerEmployeeId)
+            throw new ForbiddenException("You can only view your own leave requests.");
+
+        var effectiveEmployeeId = canViewOthers ? request.EmployeeId : callerEmployeeId;
         var query = _db.LeaveRequests.AsQueryable();
-        if (request.EmployeeId is not null) query = query.Where(r => r.EmployeeId == request.EmployeeId);
+        if (effectiveEmployeeId is not null) query = query.Where(r => r.EmployeeId == effectiveEmployeeId);
         if (request.Status is not null) query = query.Where(r => r.Status == request.Status);
 
         return await query.OrderByDescending(r => r.CreatedAtUtc)
@@ -252,10 +274,19 @@ public class GetLeaveRequestsQueryHandler : IRequestHandler<GetLeaveRequestsQuer
 public class GetTeamLeaveCalendarQueryHandler : IRequestHandler<GetTeamLeaveCalendarQuery, IReadOnlyList<TeamLeaveCalendarEntryDto>>
 {
     private readonly AppDbContext _db;
-    public GetTeamLeaveCalendarQueryHandler(AppDbContext db) => _db = db;
+    private readonly ICurrentEmployeeResolver _employeeResolver;
+    private readonly IPermissionChecker _permissionChecker;
+    public GetTeamLeaveCalendarQueryHandler(AppDbContext db, ICurrentEmployeeResolver employeeResolver, IPermissionChecker permissionChecker)
+    { _db = db; _employeeResolver = employeeResolver; _permissionChecker = permissionChecker; }
 
     public async Task<IReadOnlyList<TeamLeaveCalendarEntryDto>> Handle(GetTeamLeaveCalendarQuery request, CancellationToken ct)
     {
+        // A caller may always view their own team; viewing another manager's team needs leave.approve
+        // (proxy for HR/admin scope) — otherwise any employee holding leave.read could enumerate any team's leave.
+        var callerEmployeeId = await _employeeResolver.GetCurrentEmployeeIdAsync(ct);
+        if (request.ManagerId != callerEmployeeId && !_permissionChecker.HasPermission(Domain.Identity.Permissions.LeaveApprove))
+            throw new ForbiddenException("You can only view your own team's leave calendar.");
+
         var reporteeIds = await _db.Employees.Where(e => e.ManagerId == request.ManagerId).Select(e => e.Id).ToListAsync(ct);
         return await _db.LeaveRequests
             .Where(r => reporteeIds.Contains(r.EmployeeId)
@@ -269,10 +300,17 @@ public class GetTeamLeaveCalendarQueryHandler : IRequestHandler<GetTeamLeaveCale
 public class GetBradfordScoreQueryHandler : IRequestHandler<GetBradfordScoreQuery, BradfordScoreDto>
 {
     private readonly AppDbContext _db;
-    public GetBradfordScoreQueryHandler(AppDbContext db) => _db = db;
+    private readonly ICurrentEmployeeResolver _employeeResolver;
+    private readonly IPermissionChecker _permissionChecker;
+    public GetBradfordScoreQueryHandler(AppDbContext db, ICurrentEmployeeResolver employeeResolver, IPermissionChecker permissionChecker)
+    { _db = db; _employeeResolver = employeeResolver; _permissionChecker = permissionChecker; }
 
     public async Task<BradfordScoreDto> Handle(GetBradfordScoreQuery request, CancellationToken ct)
     {
+        var callerEmployeeId = await _employeeResolver.GetCurrentEmployeeIdAsync(ct);
+        if (request.EmployeeId != callerEmployeeId && !_permissionChecker.HasPermission(Domain.Identity.Permissions.LeaveApprove))
+            throw new ForbiddenException("You can only view your own absence score.");
+
         var approvedRequests = await _db.LeaveRequests
             .Where(r => r.EmployeeId == request.EmployeeId && r.Status == LeaveRequestStatus.Approved && r.StartDate.Year == request.Year)
             .ToListAsync(ct);

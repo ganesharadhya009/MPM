@@ -42,6 +42,7 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IManagerCycleValidator, ManagerCycleValidator>();
         services.AddScoped<ICurrentEmployeeResolver, CurrentEmployeeResolver>();
+        services.AddScoped<IPermissionChecker, PermissionChecker>();
         services.AddScoped<IWorkflowEngine, WorkflowEngine>();
 
         // MediatR scans both Application (command/query contracts) and Infrastructure
