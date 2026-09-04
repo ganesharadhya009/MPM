@@ -33,6 +33,12 @@ public record ApproveWorkflowRequestCommand(Guid WorkflowRequestId, string? Comm
 public record RejectWorkflowRequestCommand(Guid WorkflowRequestId, string? Comment) : IRequest;
 public record WithdrawWorkflowRequestCommand(Guid WorkflowRequestId) : IRequest;
 
+/// <summary>Published by IWorkflowEngine whenever a WorkflowRequest reaches a terminal status (Approved/Rejected/
+/// Withdrawn). Keeps the engine generic: each module (Attendance regularization, Leave, Timesheet, Payroll Run)
+/// owns its own INotificationHandler that applies the type-specific side effect instead of the engine knowing
+/// about every module's domain.</summary>
+public record WorkflowRequestResolvedNotification(Guid WorkflowRequestId, WorkflowRequestType RequestType, WorkflowStatus Status) : INotification;
+
 // --- Chain rules (no-code chain builder lands in Phase 4; this is the CRUD it will sit on top of) ---
 public record CreateWorkflowChainRuleCommand(WorkflowRequestType RequestType, string RuleJson, int Order) : IRequest<Guid>;
 public record DeleteWorkflowChainRuleCommand(Guid Id) : IRequest;

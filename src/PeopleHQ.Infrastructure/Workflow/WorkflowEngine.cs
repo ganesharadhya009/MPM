@@ -1,4 +1,5 @@
 using System.Text.Json;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PeopleHQ.Application.Common.Exceptions;
 using PeopleHQ.Application.Common.Interfaces;
@@ -15,13 +16,16 @@ namespace PeopleHQ.Infrastructure.Workflow;
 /// rule is configured for the request type), creates the WorkflowRequest + WorkflowApprovalStep rows at
 /// submission time, and drives sequential approve/reject/withdraw transitions. v1 supports Sequential steps only
 /// (AnyOf/AllOf are modeled in the domain for future multi-approver-per-step support, not yet implemented here).
+/// Publishes WorkflowRequestResolvedNotification on every terminal transition so modules can apply their own
+/// side effects without this engine knowing about their domains.
 /// </summary>
 public class WorkflowEngine : IWorkflowEngine
 {
     private readonly AppDbContext _db;
     private readonly ITenantContext _tenant;
+    private readonly IPublisher _publisher;
 
-    public WorkflowEngine(AppDbContext db, ITenantContext tenant) { _db = db; _tenant = tenant; }
+    public WorkflowEngine(AppDbContext db, ITenantContext tenant, IPublisher publisher) { _db = db; _tenant = tenant; _publisher = publisher; }
 
     public async Task<Guid> SubmitAsync(WorkflowRequestType requestType, Guid requesterEmployeeId, object payload, CancellationToken ct = default)
     {
@@ -40,7 +44,8 @@ public class WorkflowEngine : IWorkflowEngine
         _db.WorkflowRequests.Add(request);
         await _db.SaveChangesAsync(ct); // need request.Id for steps
 
-        if (chain.Count == 0)
+        var autoApproved = chain.Count == 0;
+        if (autoApproved)
         {
             // No resolvable approver (e.g. requester has no manager) — auto-approve so the request never stalls.
             request.Status = WorkflowStatus.Approved;
@@ -62,6 +67,8 @@ public class WorkflowEngine : IWorkflowEngine
         }
 
         await _db.SaveChangesAsync(ct);
+        if (autoApproved)
+            await _publisher.Publish(new WorkflowRequestResolvedNotification(request.Id, request.RequestType, request.Status), ct);
         return request.Id;
     }
 
@@ -80,7 +87,8 @@ public class WorkflowEngine : IWorkflowEngine
             .Where(s => s.WorkflowRequestId == request.Id && s.StepOrder == request.CurrentStepOrder + 1)
             .FirstOrDefaultAsync(ct);
 
-        if (nextStep is null)
+        var resolved = nextStep is null;
+        if (resolved)
         {
             request.Status = WorkflowStatus.Approved;
             request.ResolvedAtUtc = DateTime.UtcNow;
@@ -91,6 +99,8 @@ public class WorkflowEngine : IWorkflowEngine
         }
 
         await _db.SaveChangesAsync(ct);
+        if (resolved)
+            await _publisher.Publish(new WorkflowRequestResolvedNotification(request.Id, request.RequestType, request.Status), ct);
     }
 
     public async Task RejectCurrentStepAsync(Guid workflowRequestId, Guid actingEmployeeId, string? comment, CancellationToken ct = default)
@@ -112,6 +122,7 @@ public class WorkflowEngine : IWorkflowEngine
         request.Status = WorkflowStatus.Rejected;
         request.ResolvedAtUtc = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
+        await _publisher.Publish(new WorkflowRequestResolvedNotification(request.Id, request.RequestType, request.Status), ct);
     }
 
     public async Task WithdrawAsync(Guid workflowRequestId, Guid requesterEmployeeId, CancellationToken ct = default)
@@ -126,6 +137,7 @@ public class WorkflowEngine : IWorkflowEngine
         request.Status = WorkflowStatus.Withdrawn;
         request.ResolvedAtUtc = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
+        await _publisher.Publish(new WorkflowRequestResolvedNotification(request.Id, request.RequestType, request.Status), ct);
     }
 
     /// <summary>Returns the current-step row if actingEmployeeId is its approver or an active delegate of that
