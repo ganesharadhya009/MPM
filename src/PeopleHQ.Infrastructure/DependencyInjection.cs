@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -52,7 +53,33 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IEmailSender, LoggingEmailSender>();
         services.AddScoped<IWebhookDispatcher, WebhookDispatcher>();
-        services.AddHttpClient(nameof(WebhookDispatcher), client => client.Timeout = TimeSpan.FromSeconds(10));
+        services.AddHttpClient(nameof(WebhookDispatcher), client => client.Timeout = TimeSpan.FromSeconds(10))
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+            {
+                // SSRF hardening: never follow a redirect (a target could pass the creation-time SsrfGuard
+                // check, then redirect real deliveries to an internal address), and re-resolve + validate
+                // the destination IP at the moment of connecting rather than trusting the DNS lookup used at
+                // subscription-creation time — a hostname's record can change afterward (DNS rebinding).
+                AllowAutoRedirect = false,
+                ConnectCallback = async (context, ct) =>
+                {
+                    var addresses = await System.Net.Dns.GetHostAddressesAsync(context.DnsEndPoint.Host, ct);
+                    var address = addresses.FirstOrDefault(SsrfGuard.IsPublicAddress)
+                        ?? throw new SocketException((int)SocketError.HostNotFound);
+
+                    var socket = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
+                    try
+                    {
+                        await socket.ConnectAsync(address, context.DnsEndPoint.Port, ct);
+                        return new NetworkStream(socket, ownsSocket: true);
+                    }
+                    catch
+                    {
+                        socket.Dispose();
+                        throw;
+                    }
+                }
+            });
 
         // MediatR scans both Application (command/query contracts) and Infrastructure
         // (handlers) assemblies — see the note in PeopleHQ.Application.DependencyInjection.
