@@ -27,8 +27,16 @@ public static class CsvExporter
         return Encoding.UTF8.GetBytes(sb.ToString());
     }
 
+    /// <summary>Neutralizes formula characters (=,+,-,@, tab) at the start of a field before quoting/escaping —
+    /// otherwise a value like "=HYPERLINK(...)" from user-entered data (an employee name, a leave reason,
+    /// etc.) executes as a formula when the exported CSV is opened in Excel/Sheets ("CSV injection").
+    /// Prefixing with a leading apostrophe is the standard mitigation and keeps the value's plain-text
+    /// meaning intact.</summary>
     private static string Escape(string value)
     {
+        if (value.Length > 0 && (value[0] is '=' or '+' or '-' or '@' or '\t'))
+            value = "'" + value;
+
         if (value.Contains(',') || value.Contains('"') || value.Contains('\n') || value.Contains('\r'))
             return $"\"{value.Replace("\"", "\"\"")}\"";
         return value;
