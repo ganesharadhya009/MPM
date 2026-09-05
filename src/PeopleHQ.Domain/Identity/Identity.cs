@@ -158,4 +158,7 @@ public static class Permissions
     // Phase 4: API keys + webhooks for tenants (05-enhancements-and-roadmap.md)
     public const string ApiKeyWrite = "apikey.write";
     public const string WebhookWrite = "webhook.write";
+
+    // Phase 4: SSO
+    public const string SsoConfigWrite = "ssoconfig.write";
 }

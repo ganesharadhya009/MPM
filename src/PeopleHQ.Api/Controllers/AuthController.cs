@@ -87,6 +87,25 @@ public class AuthController : ControllerBase
         return succeeded ? NoContent() : Problem(title: "Password reset failed", statusCode: 400);
     }
 
+    [HttpGet("sso/login")]
+    [AllowAnonymous]
+    public async Task<IActionResult> SsoLogin()
+    {
+        var authorizationUrl = await _sender.Send(new InitiateSsoLoginCommand());
+        return Ok(new { authorizationUrl });
+    }
+
+    [HttpGet("sso/callback")]
+    [AllowAnonymous]
+    public async Task<IActionResult> SsoCallback([FromQuery] string code, [FromQuery] string state)
+    {
+        var result = await _sender.Send(new CompleteSsoLoginCommand(code, state));
+        if (!result.Succeeded) return Problem(title: "SSO sign-in failed", statusCode: 401, detail: result.Error);
+
+        SetRefreshCookie(result.RefreshToken!);
+        return Ok(new { accessToken = result.AccessToken });
+    }
+
     private void SetRefreshCookie(string token) =>
         Response.Cookies.Append("refresh_token", token, new CookieOptions
         {

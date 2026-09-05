@@ -134,6 +134,7 @@ public class AppDbContext : IdentityUserContext<AppUser, Guid>
     public DbSet<DashboardLayout> DashboardLayouts => Set<DashboardLayout>();
 
     // Integrations (API keys + webhooks)
+    public DbSet<SsoConfiguration> SsoConfigurations => Set<SsoConfiguration>();
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
     public DbSet<WebhookSubscription> WebhookSubscriptions => Set<WebhookSubscription>();
     public DbSet<WebhookDelivery> WebhookDeliveries => Set<WebhookDelivery>();

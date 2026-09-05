@@ -33,6 +33,7 @@ public static class SystemRoleSeeder
             Permissions.OkrCycleWrite,
             Permissions.DashboardRead, Permissions.DashboardWrite,
             Permissions.ApiKeyWrite, Permissions.WebhookWrite,
+            Permissions.SsoConfigWrite,
         },
         ["Manager"] = new[]
         {
