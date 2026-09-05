@@ -11,6 +11,7 @@ using PeopleHQ.Infrastructure.Auditing;
 using PeopleHQ.Infrastructure.Common;
 using PeopleHQ.Infrastructure.Employees;
 using PeopleHQ.Infrastructure.Identity;
+using PeopleHQ.Infrastructure.Integrations;
 using PeopleHQ.Infrastructure.Notifications;
 using PeopleHQ.Infrastructure.Payroll;
 using PeopleHQ.Infrastructure.Persistence;
@@ -50,6 +51,8 @@ public static class DependencyInjection
         services.AddScoped<IStatutoryCalculator, IndiaStatutoryCalculator>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IEmailSender, LoggingEmailSender>();
+        services.AddScoped<IWebhookDispatcher, WebhookDispatcher>();
+        services.AddHttpClient(nameof(WebhookDispatcher), client => client.Timeout = TimeSpan.FromSeconds(10));
 
         // MediatR scans both Application (command/query contracts) and Infrastructure
         // (handlers) assemblies — see the note in PeopleHQ.Application.DependencyInjection.

@@ -154,4 +154,8 @@ public static class Permissions
     // Configurable dashboards ("most needed options" #8)
     public const string DashboardRead = "dashboard.read";
     public const string DashboardWrite = "dashboard.write";
+
+    // Phase 4: API keys + webhooks for tenants (05-enhancements-and-roadmap.md)
+    public const string ApiKeyWrite = "apikey.write";
+    public const string WebhookWrite = "webhook.write";
 }

@@ -8,6 +8,7 @@ using PeopleHQ.Domain.Dashboards;
 using PeopleHQ.Domain.Employees;
 using PeopleHQ.Domain.Engagement;
 using PeopleHQ.Domain.Identity;
+using PeopleHQ.Domain.Integrations;
 using PeopleHQ.Domain.Leave;
 using PeopleHQ.Domain.Notifications;
 using PeopleHQ.Domain.Onboarding;
@@ -131,6 +132,11 @@ public class AppDbContext : IdentityUserContext<AppUser, Guid>
     public DbSet<HelpdeskTicket> HelpdeskTickets => Set<HelpdeskTicket>();
     public DbSet<Announcement> Announcements => Set<Announcement>();
     public DbSet<DashboardLayout> DashboardLayouts => Set<DashboardLayout>();
+
+    // Integrations (API keys + webhooks)
+    public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
+    public DbSet<WebhookSubscription> WebhookSubscriptions => Set<WebhookSubscription>();
+    public DbSet<WebhookDelivery> WebhookDeliveries => Set<WebhookDelivery>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
