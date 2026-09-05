@@ -122,6 +122,11 @@ public class AssignAssetCommandHandler : IRequestHandler<AssignAssetCommand>
         var asset = await _db.Assets.FindAsync(new object[] { request.AssetId }, ct) ?? throw new NotFoundException(nameof(Asset), request.AssetId);
         if (asset.Status == AssetStatus.Retired) throw new ConflictException("A retired asset cannot be assigned.");
 
+        // Employee is tenant-scoped via the global query filter, so this lookup both validates the id is
+        // real and confirms it belongs to the current tenant — without it, an arbitrary or cross-tenant
+        // GUID would be written straight into AssignedEmployeeId with no check at all.
+        _ = await _db.Employees.FindAsync(new object[] { request.EmployeeId }, ct) ?? throw new NotFoundException(nameof(Domain.Employees.Employee), request.EmployeeId);
+
         asset.AssignedEmployeeId = request.EmployeeId;
         asset.Status = AssetStatus.Assigned;
         await _db.SaveChangesAsync(ct);
@@ -205,6 +210,11 @@ public class AssignHelpdeskTicketCommandHandler : IRequestHandler<AssignHelpdesk
     public async Task Handle(AssignHelpdeskTicketCommand request, CancellationToken ct)
     {
         var ticket = await _db.HelpdeskTickets.FindAsync(new object[] { request.TicketId }, ct) ?? throw new NotFoundException(nameof(HelpdeskTicket), request.TicketId);
+
+        // Same tenant-scoping-via-existence-check as AssignAssetCommandHandler — Employee's global query
+        // filter means this lookup can only succeed for an employee in the current tenant.
+        _ = await _db.Employees.FindAsync(new object[] { request.AssignedToEmployeeId }, ct) ?? throw new NotFoundException(nameof(Domain.Employees.Employee), request.AssignedToEmployeeId);
+
         ticket.AssignedToEmployeeId = request.AssignedToEmployeeId;
         ticket.SlaDueAtUtc = request.SlaDueAtUtc;
         if (ticket.Status == HelpdeskTicketStatus.Open) ticket.Status = HelpdeskTicketStatus.InProgress;
