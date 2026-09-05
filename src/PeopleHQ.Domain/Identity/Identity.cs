@@ -135,9 +135,12 @@ public static class Permissions
 
     // Engagement extras
     public const string SurveyWrite = "survey.write";
+    public const string SurveyRespond = "survey.respond";
     public const string AssetWrite = "asset.write";
     public const string HelpdeskTicketWrite = "helpdeskticket.write";
+    public const string HelpdeskTicketManage = "helpdeskticket.manage";
     public const string AnnouncementWrite = "announcement.write";
+    public const string AnnouncementRead = "announcement.read";
 
     // Phase 2: HR Process requests, Custom Fields, Bulk Import
     public const string HrProcessRequestWrite = "hrprocess.write";
