@@ -31,6 +31,7 @@ public static class SystemRoleSeeder
             Permissions.SurveyWrite, Permissions.AssetWrite, Permissions.HelpdeskTicketWrite, Permissions.HelpdeskTicketManage, Permissions.AnnouncementWrite, Permissions.AnnouncementRead,
             Permissions.CustomFieldDefinitionWrite, Permissions.CustomFieldValueWrite, Permissions.BulkImportWrite,
             Permissions.OkrCycleWrite,
+            Permissions.DashboardRead, Permissions.DashboardWrite,
         },
         ["Manager"] = new[]
         {
@@ -43,6 +44,7 @@ public static class SystemRoleSeeder
             Permissions.NotificationRead, Permissions.PayslipReadOwn,
             Permissions.HrProcessRequestWrite,
             Permissions.SurveyRespond, Permissions.HelpdeskTicketWrite, Permissions.AnnouncementRead,
+            Permissions.DashboardRead,
         },
         ["Employee"] = new[]
         {
@@ -55,12 +57,14 @@ public static class SystemRoleSeeder
             Permissions.NotificationRead,
             Permissions.HrProcessRequestWrite,
             Permissions.SurveyRespond, Permissions.HelpdeskTicketWrite, Permissions.AnnouncementRead,
+            Permissions.DashboardRead,
         },
         ["Recruiter"] = new[]
         {
             Permissions.EmployeeRead, Permissions.CandidateRead, Permissions.CandidateWrite,
             Permissions.OnboardingTemplateRead, Permissions.OnboardingTaskRead, Permissions.OnboardingTaskWrite,
             Permissions.AnnouncementRead,
+            Permissions.DashboardRead,
         },
     };
 

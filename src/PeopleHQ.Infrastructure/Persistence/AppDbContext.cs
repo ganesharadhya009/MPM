@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using PeopleHQ.Application.Common.Interfaces;
 using PeopleHQ.Domain.Attendance;
 using PeopleHQ.Domain.Auditing;
+using PeopleHQ.Domain.Dashboards;
 using PeopleHQ.Domain.Employees;
 using PeopleHQ.Domain.Engagement;
 using PeopleHQ.Domain.Identity;
@@ -129,6 +130,7 @@ public class AppDbContext : IdentityUserContext<AppUser, Guid>
     public DbSet<Asset> Assets => Set<Asset>();
     public DbSet<HelpdeskTicket> HelpdeskTickets => Set<HelpdeskTicket>();
     public DbSet<Announcement> Announcements => Set<Announcement>();
+    public DbSet<DashboardLayout> DashboardLayouts => Set<DashboardLayout>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

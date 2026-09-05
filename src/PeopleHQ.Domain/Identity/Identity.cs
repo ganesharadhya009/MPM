@@ -150,4 +150,8 @@ public static class Permissions
 
     // Phase 3: OKR cycle administration (Objective/KeyResult self-service reuses OkrWrite above)
     public const string OkrCycleWrite = "okrcycle.write";
+
+    // Configurable dashboards ("most needed options" #8)
+    public const string DashboardRead = "dashboard.read";
+    public const string DashboardWrite = "dashboard.write";
 }
