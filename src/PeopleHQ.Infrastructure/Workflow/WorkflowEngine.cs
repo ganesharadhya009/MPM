@@ -36,14 +36,15 @@ public class WorkflowEngine : IWorkflowEngine
 
     public async Task<Guid> SubmitAsync(WorkflowRequestType requestType, Guid requesterEmployeeId, object payload, CancellationToken ct = default)
     {
-        var chain = await ResolveApproverChainAsync(requestType, requesterEmployeeId, ct);
+        var payloadJson = JsonSerializer.Serialize(payload);
+        var chain = await ResolveApproverChainAsync(requestType, requesterEmployeeId, payloadJson, ct);
 
         var request = new WorkflowRequest
         {
             TenantId = _tenant.TenantId,
             RequestType = requestType,
             RequesterEmployeeId = requesterEmployeeId,
-            PayloadJson = JsonSerializer.Serialize(payload),
+            PayloadJson = payloadJson,
             Status = WorkflowStatus.Pending,
             CurrentStepOrder = 1,
             SubmittedAtUtc = DateTime.UtcNow
@@ -170,7 +171,18 @@ public class WorkflowEngine : IWorkflowEngine
         return step;
     }
 
-    private async Task<List<Guid>> ResolveApproverChainAsync(WorkflowRequestType requestType, Guid requesterEmployeeId, CancellationToken ct)
+    /// <summary>
+    /// No-code approval-chain builder (05-enhancements-and-roadmap.md Phase 4, "replaces the Phase-1 static
+    /// rules"): each WorkflowChainRule.RuleJson names an approver strategy and an optional condition gating
+    /// whether that step applies at all, e.g. {"approver":"skip_level_manager","if":{"field":"Days","op":
+    /// "&gt;","value":5}} for "manager then skip-level for &gt;5 days" (§J example), or
+    /// {"approver":"department_head"} for "department head for designation changes" with no condition.
+    /// Supported approver strategies: direct_manager, skip_level_manager (requester's manager's manager),
+    /// department_head, specific_employee (fixed {"employeeId":"..."} — e.g. always route Finance approval
+    /// to a named person). A rule whose condition doesn't match the submitted payload is skipped entirely
+    /// (not added as a step) rather than blocking the chain.
+    /// </summary>
+    private async Task<List<Guid>> ResolveApproverChainAsync(WorkflowRequestType requestType, Guid requesterEmployeeId, string payloadJson, CancellationToken ct)
     {
         var employee = await _db.Employees.FindAsync(new object[] { requesterEmployeeId }, ct) ?? throw new NotFoundException(nameof(Employee), requesterEmployeeId);
         var rules = await _db.WorkflowChainRules.Where(r => r.RequestType == requestType).OrderBy(r => r.Order).ToListAsync(ct);
@@ -184,15 +196,20 @@ public class WorkflowEngine : IWorkflowEngine
         var chain = new List<Guid>();
         foreach (var rule in rules)
         {
-            var approverType = ParseApproverType(rule.RuleJson);
+            var (approverType, condition, specificEmployeeId) = ParseRule(rule.RuleJson);
+            if (condition is not null && !EvaluateCondition(condition.Value, payloadJson)) continue;
+
             Guid? approverId = approverType switch
             {
                 "direct_manager" => employee.ManagerId,
+                "skip_level_manager" => employee.ManagerId is null ? null
+                    : (await _db.Employees.FindAsync(new object[] { employee.ManagerId.Value }, ct))?.ManagerId,
                 "department_head" => employee.DepartmentId is null ? null
                     : await _db.Departments.Where(d => d.Id == employee.DepartmentId).Select(d => d.HeadEmployeeId).FirstOrDefaultAsync(ct),
+                "specific_employee" => specificEmployeeId,
                 _ => null
             };
-            if (approverId is not null && approverId != Guid.Empty) chain.Add(approverId.Value);
+            if (approverId is not null && approverId != Guid.Empty && approverId != requesterEmployeeId) chain.Add(approverId.Value);
         }
         return chain;
     }
@@ -201,16 +218,68 @@ public class WorkflowEngine : IWorkflowEngine
         => _notificationService.NotifyAsync(approverEmployeeId, "workflow.approval",
             "New approval request", $"A {requestType} request is waiting for your approval.", ct: ct);
 
-    private static string? ParseApproverType(string ruleJson)
+    private readonly record struct RuleCondition(string Field, string Op, decimal Value);
+
+    private static (string? Approver, RuleCondition? Condition, Guid? SpecificEmployeeId) ParseRule(string ruleJson)
     {
         try
         {
             using var doc = JsonDocument.Parse(ruleJson);
-            return doc.RootElement.TryGetProperty("approver", out var prop) ? prop.GetString() : null;
+            var root = doc.RootElement;
+            var approver = root.TryGetProperty("approver", out var approverProp) ? approverProp.GetString() : null;
+
+            Guid? specificEmployeeId = null;
+            if (approver == "specific_employee" && root.TryGetProperty("employeeId", out var idProp) && Guid.TryParse(idProp.GetString(), out var parsedId))
+                specificEmployeeId = parsedId;
+
+            RuleCondition? condition = null;
+            if (root.TryGetProperty("if", out var ifProp) &&
+                ifProp.TryGetProperty("field", out var fieldProp) &&
+                ifProp.TryGetProperty("op", out var opProp) &&
+                ifProp.TryGetProperty("value", out var valueProp) &&
+                valueProp.TryGetDecimal(out var value))
+            {
+                condition = new RuleCondition(fieldProp.GetString() ?? string.Empty, opProp.GetString() ?? string.Empty, value);
+            }
+
+            return (approver, condition, specificEmployeeId);
         }
         catch (JsonException)
         {
-            return null;
+            return (null, null, null);
+        }
+    }
+
+    /// <summary>Looks up condition.Field case-insensitively in the submitted payload (top-level properties
+    /// only — e.g. LeaveRequest's "Days" or Travel's "EstimatedCost") and compares numerically. A missing
+    /// or non-numeric field fails the condition (the rule is skipped) rather than throwing, so a
+    /// misconfigured or type-mismatched rule never blocks submission.</summary>
+    private static bool EvaluateCondition(RuleCondition condition, string payloadJson)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(payloadJson);
+            foreach (var property in doc.RootElement.EnumerateObject())
+            {
+                if (!string.Equals(property.Name, condition.Field, StringComparison.OrdinalIgnoreCase)) continue;
+                if (!property.Value.TryGetDecimal(out var fieldValue)) return false;
+
+                return condition.Op switch
+                {
+                    ">" => fieldValue > condition.Value,
+                    ">=" => fieldValue >= condition.Value,
+                    "<" => fieldValue < condition.Value,
+                    "<=" => fieldValue <= condition.Value,
+                    "==" => fieldValue == condition.Value,
+                    "!=" => fieldValue != condition.Value,
+                    _ => false
+                };
+            }
+            return false; // field not present in payload
+        }
+        catch (JsonException)
+        {
+            return false;
         }
     }
 }
