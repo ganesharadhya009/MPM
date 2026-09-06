@@ -165,4 +165,7 @@ public static class Permissions
     // Phase 4: self-serve billing
     public const string BillingRead = "billing.read";
     public const string BillingWrite = "billing.write";
+
+    // Phase 5: differentiation / AI-assisted insights (manager-facing signals, never self-facing)
+    public const string AttritionRiskRead = "attritionrisk.read";
 }

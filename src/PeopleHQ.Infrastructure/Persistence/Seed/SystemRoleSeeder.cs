@@ -35,6 +35,7 @@ public static class SystemRoleSeeder
             Permissions.ApiKeyWrite, Permissions.WebhookWrite,
             Permissions.SsoConfigWrite,
             Permissions.BillingRead, Permissions.BillingWrite,
+            Permissions.AttritionRiskRead,
         },
         ["Manager"] = new[]
         {
@@ -42,6 +43,7 @@ public static class SystemRoleSeeder
             Permissions.AttendanceCheckInOut, Permissions.AttendanceRead, Permissions.RegularizationApprove,
             Permissions.LeaveApply, Permissions.LeaveApprove, Permissions.LeaveRead,
             Permissions.TimesheetWrite, Permissions.TimesheetApprove, Permissions.TimesheetRead,
+            Permissions.AttritionRiskRead,
             Permissions.GoalWrite, Permissions.OkrWrite, Permissions.FeedbackWrite,
             Permissions.WorkflowApprove, Permissions.DelegationWrite,
             Permissions.NotificationRead, Permissions.PayslipReadOwn,
