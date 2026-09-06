@@ -9,6 +9,7 @@ using PeopleHQ.Domain.Identity;
 using PeopleHQ.Application.Payroll;
 using PeopleHQ.Application.Workflow;
 using PeopleHQ.Infrastructure.Auditing;
+using PeopleHQ.Infrastructure.Billing;
 using PeopleHQ.Infrastructure.Common;
 using PeopleHQ.Infrastructure.Employees;
 using PeopleHQ.Infrastructure.Identity;
@@ -52,6 +53,7 @@ public static class DependencyInjection
         services.AddScoped<IStatutoryCalculator, IndiaStatutoryCalculator>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IEmailSender, LoggingEmailSender>();
+        services.AddScoped<IPaymentGateway, MockPaymentGateway>();
         services.AddScoped<IWebhookDispatcher, WebhookDispatcher>();
         services.AddHttpClient(nameof(WebhookDispatcher), client => client.Timeout = TimeSpan.FromSeconds(10))
             .ConfigurePrimaryHttpMessageHandler(CreateSsrfHardenedHandler);

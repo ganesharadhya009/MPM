@@ -34,6 +34,7 @@ public static class SystemRoleSeeder
             Permissions.DashboardRead, Permissions.DashboardWrite,
             Permissions.ApiKeyWrite, Permissions.WebhookWrite,
             Permissions.SsoConfigWrite,
+            Permissions.BillingRead, Permissions.BillingWrite,
         },
         ["Manager"] = new[]
         {

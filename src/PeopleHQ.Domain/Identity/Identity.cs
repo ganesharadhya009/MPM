@@ -161,4 +161,8 @@ public static class Permissions
 
     // Phase 4: SSO
     public const string SsoConfigWrite = "ssoconfig.write";
+
+    // Phase 4: self-serve billing
+    public const string BillingRead = "billing.read";
+    public const string BillingWrite = "billing.write";
 }

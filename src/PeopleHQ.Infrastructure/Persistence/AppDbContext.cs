@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using PeopleHQ.Application.Common.Interfaces;
 using PeopleHQ.Domain.Attendance;
 using PeopleHQ.Domain.Auditing;
+using PeopleHQ.Domain.Billing;
 using PeopleHQ.Domain.Dashboards;
 using PeopleHQ.Domain.Employees;
 using PeopleHQ.Domain.Engagement;
@@ -135,6 +136,7 @@ public class AppDbContext : IdentityUserContext<AppUser, Guid>
 
     // Integrations (API keys + webhooks)
     public DbSet<SsoConfiguration> SsoConfigurations => Set<SsoConfiguration>();
+    public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
     public DbSet<WebhookSubscription> WebhookSubscriptions => Set<WebhookSubscription>();
     public DbSet<WebhookDelivery> WebhookDeliveries => Set<WebhookDelivery>();
