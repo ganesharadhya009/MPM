@@ -40,12 +40,15 @@ public class CreateOffboardingChecklistTemplateCommandHandler : IRequestHandler<
 
 public class UpdateOffboardingChecklistTemplateCommandHandler : IRequestHandler<UpdateOffboardingChecklistTemplateCommand>
 {
-    private readonly AppDbContext _db; private readonly IAuditLogWriter _audit;
-    public UpdateOffboardingChecklistTemplateCommandHandler(AppDbContext db, IAuditLogWriter audit) { _db = db; _audit = audit; }
+    private readonly AppDbContext _db; private readonly ITenantContext _tenant; private readonly IAuditLogWriter _audit;
+    public UpdateOffboardingChecklistTemplateCommandHandler(AppDbContext db, ITenantContext tenant, IAuditLogWriter audit) { _db = db; _tenant = tenant; _audit = audit; }
 
     public async Task Handle(UpdateOffboardingChecklistTemplateCommand request, CancellationToken ct)
     {
-        var template = await _db.OffboardingChecklistTemplates.FindAsync(new object[] { request.Id }, ct) ?? throw new NotFoundException(nameof(OffboardingChecklistTemplate), request.Id);
+        // Explicit tenant-scoped lookup rather than FindAsync(id) — see RevokeApiKeyCommandHandler /
+        // memory: peoplehq-findasync-tenant-scoping.
+        var template = await _db.OffboardingChecklistTemplates.FirstOrDefaultAsync(t => t.Id == request.Id && t.TenantId == _tenant.TenantId, ct)
+            ?? throw new NotFoundException(nameof(OffboardingChecklistTemplate), request.Id);
         var before = new { template.Name, template.AppliesToDepartmentId, template.AppliesToDesignationId };
         template.Name = request.Name; template.AppliesToDepartmentId = request.AppliesToDepartmentId; template.AppliesToDesignationId = request.AppliesToDesignationId;
 
@@ -66,12 +69,13 @@ public class UpdateOffboardingChecklistTemplateCommandHandler : IRequestHandler<
 
 public class DeleteOffboardingChecklistTemplateCommandHandler : IRequestHandler<DeleteOffboardingChecklistTemplateCommand>
 {
-    private readonly AppDbContext _db; private readonly IAuditLogWriter _audit;
-    public DeleteOffboardingChecklistTemplateCommandHandler(AppDbContext db, IAuditLogWriter audit) { _db = db; _audit = audit; }
+    private readonly AppDbContext _db; private readonly ITenantContext _tenant; private readonly IAuditLogWriter _audit;
+    public DeleteOffboardingChecklistTemplateCommandHandler(AppDbContext db, ITenantContext tenant, IAuditLogWriter audit) { _db = db; _tenant = tenant; _audit = audit; }
 
     public async Task Handle(DeleteOffboardingChecklistTemplateCommand request, CancellationToken ct)
     {
-        var template = await _db.OffboardingChecklistTemplates.FindAsync(new object[] { request.Id }, ct) ?? throw new NotFoundException(nameof(OffboardingChecklistTemplate), request.Id);
+        var template = await _db.OffboardingChecklistTemplates.FirstOrDefaultAsync(t => t.Id == request.Id && t.TenantId == _tenant.TenantId, ct)
+            ?? throw new NotFoundException(nameof(OffboardingChecklistTemplate), request.Id);
         var items = await _db.OffboardingChecklistItems.Where(i => i.TemplateId == template.Id).ToListAsync(ct);
         _db.OffboardingChecklistItems.RemoveRange(items);
 
@@ -103,12 +107,13 @@ public class GetOffboardingChecklistTemplatesQueryHandler : IRequestHandler<GetO
 // ===== Offboarding Tasks =====
 public class CompleteOffboardingTaskCommandHandler : IRequestHandler<CompleteOffboardingTaskCommand>
 {
-    private readonly AppDbContext _db; private readonly IAuditLogWriter _audit;
-    public CompleteOffboardingTaskCommandHandler(AppDbContext db, IAuditLogWriter audit) { _db = db; _audit = audit; }
+    private readonly AppDbContext _db; private readonly ITenantContext _tenant; private readonly IAuditLogWriter _audit;
+    public CompleteOffboardingTaskCommandHandler(AppDbContext db, ITenantContext tenant, IAuditLogWriter audit) { _db = db; _tenant = tenant; _audit = audit; }
 
     public async Task Handle(CompleteOffboardingTaskCommand request, CancellationToken ct)
     {
-        var task = await _db.OffboardingTasks.FindAsync(new object[] { request.Id }, ct) ?? throw new NotFoundException(nameof(OffboardingTask), request.Id);
+        var task = await _db.OffboardingTasks.FirstOrDefaultAsync(t => t.Id == request.Id && t.TenantId == _tenant.TenantId, ct)
+            ?? throw new NotFoundException(nameof(OffboardingTask), request.Id);
         var before = new { task.Status };
         task.Status = OffboardingTaskStatus.Done;
         await _db.SaveChangesAsync(ct);

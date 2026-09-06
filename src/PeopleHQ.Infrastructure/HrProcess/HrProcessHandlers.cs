@@ -1,6 +1,7 @@
 using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using PeopleHQ.Application.Common.Interfaces;
 using PeopleHQ.Application.HrProcess;
 using PeopleHQ.Application.Payroll;
@@ -109,7 +110,8 @@ public class HrProcessResolvedHandler : INotificationHandler<WorkflowRequestReso
 {
     private readonly AppDbContext _db;
     private readonly ISender _sender;
-    public HrProcessResolvedHandler(AppDbContext db, ISender sender) { _db = db; _sender = sender; }
+    private readonly ILogger<HrProcessResolvedHandler> _logger;
+    public HrProcessResolvedHandler(AppDbContext db, ISender sender, ILogger<HrProcessResolvedHandler> logger) { _db = db; _sender = sender; _logger = logger; }
 
     public async Task Handle(WorkflowRequestResolvedNotification notification, CancellationToken ct)
     {
@@ -146,7 +148,22 @@ public class HrProcessResolvedHandler : INotificationHandler<WorkflowRequestReso
                 var payload = JsonSerializer.Deserialize<ExitRequestPayload>(request.PayloadJson)!;
                 await _sender.Send(new Application.Employees.ExitEmployeeCommand(request.RequesterEmployeeId, payload.ProposedLastWorkingDay), ct);
                 await _sender.Send(new ComputeFullFinalSettlementCommand(request.RequesterEmployeeId, request.Id), ct);
-                await CloneOffboardingChecklistAsync(request.RequesterEmployeeId, payload.ProposedLastWorkingDay, ct);
+
+                // Best-effort side effect, isolated from the two calls above: by this point the exit and the
+                // settlement computation have already succeeded and committed, so a failure cloning the
+                // offboarding checklist must never surface as a failure of the (already-successful) approval
+                // itself — it would otherwise fault this notification's Publish() and could read back to the
+                // approver as an HTTP error despite the underlying WorkflowEngine transition already having
+                // saved successfully.
+                try
+                {
+                    await CloneOffboardingChecklistAsync(request.RequesterEmployeeId, request.TenantId, payload.ProposedLastWorkingDay, ct);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to clone offboarding checklist for employee {EmployeeId} (workflow request {WorkflowRequestId})",
+                        request.RequesterEmployeeId, request.Id);
+                }
                 break;
             }
             // TravelRequest / TravelExpense: no dedicated table in v1 — approval status alone is sufficient.
@@ -156,9 +173,11 @@ public class HrProcessResolvedHandler : INotificationHandler<WorkflowRequestReso
     /// <summary>Mirrors ConvertCandidateToEmployeeCommandHandler's onboarding-checklist cloning logic exactly,
     /// for the exit side: clones any OffboardingChecklistTemplate matching the exiting employee's department/
     /// designation into concrete OffboardingTask rows, due-dated relative to the proposed last working day.</summary>
-    private async Task CloneOffboardingChecklistAsync(Guid employeeId, DateOnly lastWorkingDay, CancellationToken ct)
+    private async Task CloneOffboardingChecklistAsync(Guid employeeId, Guid tenantId, DateOnly lastWorkingDay, CancellationToken ct)
     {
-        var employee = await _db.Employees.FindAsync(new object[] { employeeId }, ct);
+        // Explicit tenant-scoped lookup rather than FindAsync(id) — tenantId is already known from the
+        // WorkflowRequest fetched at the top of Handle, so no extra ITenantContext dependency is needed.
+        var employee = await _db.Employees.FirstOrDefaultAsync(e => e.Id == employeeId && e.TenantId == tenantId, ct);
         if (employee is null) return;
 
         var matchingTemplates = await _db.OffboardingChecklistTemplates
