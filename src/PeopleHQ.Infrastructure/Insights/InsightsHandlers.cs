@@ -1,14 +1,47 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using PeopleHQ.Application.Common.Exceptions;
+using PeopleHQ.Application.Common.Interfaces;
 using PeopleHQ.Application.Insights;
 using PeopleHQ.Application.Leave;
 using PeopleHQ.Domain.Attendance;
 using PeopleHQ.Domain.Employees;
+using PeopleHQ.Domain.Identity;
 using PeopleHQ.Domain.Leave;
 using PeopleHQ.Infrastructure.Persistence;
 
 namespace PeopleHQ.Infrastructure.Insights;
+
+/// <summary>
+/// Enforces "manager-facing signal, never self-facing" (05-enhancements-and-roadmap.md Phase 5) for every
+/// Insights query: the caller must directly manage the target employee (or team, for the roster query) —
+/// never the target themselves, even for a caller who also holds ReportRead. A caller with ReportRead
+/// (TenantAdmin) may look at any OTHER employee/team, matching the elevated-permission pattern used
+/// elsewhere in this codebase (e.g. Leave/Timesheet self-vs-other-employee IDOR fixes).
+/// </summary>
+internal static class InsightsAccessGuard
+{
+    public static async Task EnsureCanViewEmployeeAsync(AppDbContext db, ICurrentEmployeeResolver employeeResolver, IPermissionChecker permissionChecker, Guid targetEmployeeId, CancellationToken ct)
+    {
+        var callerEmployeeId = await employeeResolver.GetCurrentEmployeeIdAsync(ct);
+        if (targetEmployeeId == callerEmployeeId)
+            throw new ForbiddenException("This is a manager-facing signal and is never shown for your own record.");
+
+        if (permissionChecker.HasPermission(Permissions.ReportRead)) return;
+
+        var target = await db.Employees.FindAsync(new object[] { targetEmployeeId }, ct);
+        if (target?.ManagerId != callerEmployeeId)
+            throw new ForbiddenException("You can only view insights for your own direct reports.");
+    }
+
+    public static async Task EnsureCanViewTeamAsync(ICurrentEmployeeResolver employeeResolver, IPermissionChecker permissionChecker, Guid managerId, CancellationToken ct)
+    {
+        var callerEmployeeId = await employeeResolver.GetCurrentEmployeeIdAsync(ct);
+        if (permissionChecker.HasPermission(Permissions.ReportRead)) return;
+        if (managerId != callerEmployeeId)
+            throw new ForbiddenException("You can only view your own team's insights.");
+    }
+}
 
 /// <summary>
 /// Attrition-risk scoring (05-enhancements-and-roadmap.md Phase 5): "combining tenure, Bradford score,
@@ -22,10 +55,16 @@ public class GetAttritionRiskScoreQueryHandler : IRequestHandler<GetAttritionRis
 {
     private readonly AppDbContext _db;
     private readonly ISender _sender;
-    public GetAttritionRiskScoreQueryHandler(AppDbContext db, ISender sender) { _db = db; _sender = sender; }
+    private readonly ICurrentEmployeeResolver _employeeResolver;
+    private readonly IPermissionChecker _permissionChecker;
+    public GetAttritionRiskScoreQueryHandler(AppDbContext db, ISender sender, ICurrentEmployeeResolver employeeResolver, IPermissionChecker permissionChecker)
+    { _db = db; _sender = sender; _employeeResolver = employeeResolver; _permissionChecker = permissionChecker; }
 
     public async Task<AttritionRiskDto> Handle(GetAttritionRiskScoreQuery request, CancellationToken ct)
-        => await ComputeAsync(_db, _sender, request.EmployeeId, ct);
+    {
+        await InsightsAccessGuard.EnsureCanViewEmployeeAsync(_db, _employeeResolver, _permissionChecker, request.EmployeeId, ct);
+        return await ComputeAsync(_db, _sender, request.EmployeeId, ct);
+    }
 
     internal static async Task<AttritionRiskDto> ComputeAsync(AppDbContext db, ISender sender, Guid employeeId, CancellationToken ct)
     {
@@ -74,10 +113,15 @@ public class GetTeamAttritionRiskQueryHandler : IRequestHandler<GetTeamAttrition
 {
     private readonly AppDbContext _db;
     private readonly ISender _sender;
-    public GetTeamAttritionRiskQueryHandler(AppDbContext db, ISender sender) { _db = db; _sender = sender; }
+    private readonly ICurrentEmployeeResolver _employeeResolver;
+    private readonly IPermissionChecker _permissionChecker;
+    public GetTeamAttritionRiskQueryHandler(AppDbContext db, ISender sender, ICurrentEmployeeResolver employeeResolver, IPermissionChecker permissionChecker)
+    { _db = db; _sender = sender; _employeeResolver = employeeResolver; _permissionChecker = permissionChecker; }
 
     public async Task<IReadOnlyList<AttritionRiskDto>> Handle(GetTeamAttritionRiskQuery request, CancellationToken ct)
     {
+        await InsightsAccessGuard.EnsureCanViewTeamAsync(_employeeResolver, _permissionChecker, request.ManagerId, ct);
+
         var reporteeIds = await _db.Employees.Where(e => e.ManagerId == request.ManagerId).Select(e => e.Id).ToListAsync(ct);
         var results = new List<AttritionRiskDto>();
         foreach (var employeeId in reporteeIds)
@@ -96,10 +140,15 @@ public class GetTeamAttritionRiskQueryHandler : IRequestHandler<GetTeamAttrition
 public class GetAttendanceAnomalyInsightsQueryHandler : IRequestHandler<GetAttendanceAnomalyInsightsQuery, AttendanceAnomalyDto>
 {
     private readonly AppDbContext _db;
-    public GetAttendanceAnomalyInsightsQueryHandler(AppDbContext db) => _db = db;
+    private readonly ICurrentEmployeeResolver _employeeResolver;
+    private readonly IPermissionChecker _permissionChecker;
+    public GetAttendanceAnomalyInsightsQueryHandler(AppDbContext db, ICurrentEmployeeResolver employeeResolver, IPermissionChecker permissionChecker)
+    { _db = db; _employeeResolver = employeeResolver; _permissionChecker = permissionChecker; }
 
     public async Task<AttendanceAnomalyDto> Handle(GetAttendanceAnomalyInsightsQuery request, CancellationToken ct)
     {
+        await InsightsAccessGuard.EnsureCanViewEmployeeAsync(_db, _employeeResolver, _permissionChecker, request.EmployeeId, ct);
+
         var absences = await _db.AttendanceRecords
             .Where(r => r.EmployeeId == request.EmployeeId && r.Status == AttendanceStatus.Absent && r.Date.Year == request.Year)
             .Select(r => r.Date)
