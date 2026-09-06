@@ -20,6 +20,7 @@ public static class SystemRoleSeeder
             Permissions.CandidateRead, Permissions.CandidateWrite,
             Permissions.OnboardingTemplateRead, Permissions.OnboardingTemplateWrite,
             Permissions.OnboardingTaskRead, Permissions.OnboardingTaskWrite,
+            Permissions.OffboardingTemplateWrite, Permissions.OffboardingTaskRead, Permissions.OffboardingTaskWrite,
             Permissions.AttendanceRead, Permissions.ShiftWrite, Permissions.RegularizationApprove,
             Permissions.LeaveTypeWrite, Permissions.LeavePolicyWrite, Permissions.LeaveApprove, Permissions.LeaveRead,
             Permissions.ProjectWrite, Permissions.TimesheetApprove, Permissions.TimesheetRead,
@@ -50,6 +51,7 @@ public static class SystemRoleSeeder
             Permissions.HrProcessRequestWrite,
             Permissions.SurveyRespond, Permissions.HelpdeskTicketWrite, Permissions.AnnouncementRead,
             Permissions.DashboardRead,
+            Permissions.OffboardingTaskRead, Permissions.OffboardingTaskWrite,
         },
         ["Employee"] = new[]
         {

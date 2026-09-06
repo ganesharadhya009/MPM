@@ -12,6 +12,7 @@ using PeopleHQ.Domain.Identity;
 using PeopleHQ.Domain.Integrations;
 using PeopleHQ.Domain.Leave;
 using PeopleHQ.Domain.Notifications;
+using PeopleHQ.Domain.Offboarding;
 using PeopleHQ.Domain.Onboarding;
 using PeopleHQ.Domain.OrgStructure;
 using PeopleHQ.Domain.Payroll;
@@ -70,6 +71,9 @@ public class AppDbContext : IdentityUserContext<AppUser, Guid>
     public DbSet<OnboardingChecklistTemplate> OnboardingChecklistTemplates => Set<OnboardingChecklistTemplate>();
     public DbSet<OnboardingChecklistItem> OnboardingChecklistItems => Set<OnboardingChecklistItem>();
     public DbSet<OnboardingTask> OnboardingTasks => Set<OnboardingTask>();
+    public DbSet<OffboardingChecklistTemplate> OffboardingChecklistTemplates => Set<OffboardingChecklistTemplate>();
+    public DbSet<OffboardingChecklistItem> OffboardingChecklistItems => Set<OffboardingChecklistItem>();
+    public DbSet<OffboardingTask> OffboardingTasks => Set<OffboardingTask>();
 
     // Leave
     public DbSet<LeaveType> LeaveTypes => Set<LeaveType>();

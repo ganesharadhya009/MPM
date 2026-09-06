@@ -168,4 +168,9 @@ public static class Permissions
 
     // Phase 5: differentiation / AI-assisted insights (manager-facing signals, never self-facing)
     public const string AttritionRiskRead = "attritionrisk.read";
+
+    // "Most needed options" #5: exit/offboarding clearance checklist
+    public const string OffboardingTemplateWrite = "offboarding.template.write";
+    public const string OffboardingTaskRead = "offboarding.task.read";
+    public const string OffboardingTaskWrite = "offboarding.task.write";
 }

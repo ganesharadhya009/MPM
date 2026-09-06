@@ -146,9 +146,41 @@ public class HrProcessResolvedHandler : INotificationHandler<WorkflowRequestReso
                 var payload = JsonSerializer.Deserialize<ExitRequestPayload>(request.PayloadJson)!;
                 await _sender.Send(new Application.Employees.ExitEmployeeCommand(request.RequesterEmployeeId, payload.ProposedLastWorkingDay), ct);
                 await _sender.Send(new ComputeFullFinalSettlementCommand(request.RequesterEmployeeId, request.Id), ct);
+                await CloneOffboardingChecklistAsync(request.RequesterEmployeeId, payload.ProposedLastWorkingDay, ct);
                 break;
             }
             // TravelRequest / TravelExpense: no dedicated table in v1 — approval status alone is sufficient.
         }
+    }
+
+    /// <summary>Mirrors ConvertCandidateToEmployeeCommandHandler's onboarding-checklist cloning logic exactly,
+    /// for the exit side: clones any OffboardingChecklistTemplate matching the exiting employee's department/
+    /// designation into concrete OffboardingTask rows, due-dated relative to the proposed last working day.</summary>
+    private async Task CloneOffboardingChecklistAsync(Guid employeeId, DateOnly lastWorkingDay, CancellationToken ct)
+    {
+        var employee = await _db.Employees.FindAsync(new object[] { employeeId }, ct);
+        if (employee is null) return;
+
+        var matchingTemplates = await _db.OffboardingChecklistTemplates
+            .Where(t => (t.AppliesToDepartmentId == null || t.AppliesToDepartmentId == employee.DepartmentId)
+                     && (t.AppliesToDesignationId == null || t.AppliesToDesignationId == employee.DesignationId))
+            .ToListAsync(ct);
+        if (matchingTemplates.Count == 0) return;
+
+        var templateIds = matchingTemplates.Select(t => t.Id).ToList();
+        var items = await _db.OffboardingChecklistItems.Where(i => templateIds.Contains(i.TemplateId)).ToListAsync(ct);
+        foreach (var item in items)
+        {
+            _db.OffboardingTasks.Add(new Domain.Offboarding.OffboardingTask
+            {
+                TenantId = employee.TenantId,
+                EmployeeId = employeeId,
+                Title = item.Title,
+                DueDate = lastWorkingDay.AddDays(item.DueOffsetDays),
+                Status = Domain.Offboarding.OffboardingTaskStatus.Pending,
+                SourceItemId = item.Id
+            });
+        }
+        await _db.SaveChangesAsync(ct);
     }
 }
