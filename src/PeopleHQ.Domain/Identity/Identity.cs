@@ -173,4 +173,8 @@ public static class Permissions
     public const string OffboardingTemplateWrite = "offboarding.template.write";
     public const string OffboardingTaskRead = "offboarding.task.read";
     public const string OffboardingTaskWrite = "offboarding.task.write";
+
+    // "Most needed options" #7: audit log + data export/deletion center
+    public const string DataExportRead = "dataexport.read";
+    public const string DataErasureWrite = "dataerasure.write";
 }

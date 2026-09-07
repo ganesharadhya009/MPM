@@ -29,6 +29,7 @@ public static class SystemRoleSeeder
             Permissions.GoalWrite, Permissions.OkrWrite,
             Permissions.WorkflowApprove, Permissions.WorkflowChainRuleWrite,
             Permissions.ReportRead, Permissions.AuditLogRead,
+            Permissions.DataExportRead, Permissions.DataErasureWrite,
             Permissions.SurveyWrite, Permissions.AssetWrite, Permissions.HelpdeskTicketWrite, Permissions.HelpdeskTicketManage, Permissions.AnnouncementWrite, Permissions.AnnouncementRead,
             Permissions.CustomFieldDefinitionWrite, Permissions.CustomFieldValueWrite, Permissions.BulkImportWrite,
             Permissions.OkrCycleWrite,
