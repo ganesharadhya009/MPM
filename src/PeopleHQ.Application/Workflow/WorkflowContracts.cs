@@ -33,6 +33,14 @@ public record ApproveWorkflowRequestCommand(Guid WorkflowRequestId, string? Comm
 public record RejectWorkflowRequestCommand(Guid WorkflowRequestId, string? Comment) : IRequest;
 public record WithdrawWorkflowRequestCommand(Guid WorkflowRequestId) : IRequest;
 
+// "Bulk actions everywhere" ("most needed options" #6): single-row-at-a-time approval UIs age badly as
+// tenants grow. Each id is approved/rejected independently — one failure (already resolved, not the
+// caller's step, etc.) never aborts the rest of the batch; failures are collected and returned instead.
+public record BulkApproveWorkflowRequestsCommand(IReadOnlyList<Guid> WorkflowRequestIds, string? Comment) : IRequest<BulkApprovalResult>;
+public record BulkRejectWorkflowRequestsCommand(IReadOnlyList<Guid> WorkflowRequestIds, string? Comment) : IRequest<BulkApprovalResult>;
+public record BulkApprovalFailure(Guid WorkflowRequestId, string Error);
+public record BulkApprovalResult(int TotalRequested, int Succeeded, IReadOnlyList<BulkApprovalFailure> Failures);
+
 /// <summary>Published by IWorkflowEngine whenever a WorkflowRequest reaches a terminal status (Approved/Rejected/
 /// Withdrawn). Keeps the engine generic: each module (Attendance regularization, Leave, Timesheet, Payroll Run)
 /// owns its own INotificationHandler that applies the type-specific side effect instead of the engine knowing

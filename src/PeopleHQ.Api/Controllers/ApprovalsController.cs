@@ -38,6 +38,16 @@ public class ApprovalsController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("approvals/bulk-approve")]
+    [RequirePermission(Permissions.WorkflowApprove)]
+    public async Task<IActionResult> BulkApprove(BulkApprovalActionRequestBody body)
+        => Ok(await _sender.Send(new BulkApproveWorkflowRequestsCommand(body.WorkflowRequestIds, body.Comment)));
+
+    [HttpPost("approvals/bulk-reject")]
+    [RequirePermission(Permissions.WorkflowApprove)]
+    public async Task<IActionResult> BulkReject(BulkApprovalActionRequestBody body)
+        => Ok(await _sender.Send(new BulkRejectWorkflowRequestsCommand(body.WorkflowRequestIds, body.Comment)));
+
     [HttpGet("workflow-requests/mine")]
     public async Task<IActionResult> GetMine([FromQuery] WorkflowStatus? status)
         => Ok(await _sender.Send(new GetMyRequestsQuery(status)));
@@ -51,3 +61,4 @@ public class ApprovalsController : ControllerBase
 }
 
 public record ApprovalActionRequestBody(string? Comment);
+public record BulkApprovalActionRequestBody(IReadOnlyList<Guid> WorkflowRequestIds, string? Comment);

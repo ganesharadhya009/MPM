@@ -62,6 +62,62 @@ public class ApproveWorkflowRequestCommandHandler : IRequestHandler<ApproveWorkf
     }
 }
 
+public class BulkApproveWorkflowRequestsCommandHandler : IRequestHandler<BulkApproveWorkflowRequestsCommand, BulkApprovalResult>
+{
+    private readonly IWorkflowEngine _engine; private readonly ICurrentEmployeeResolver _employeeResolver;
+    public BulkApproveWorkflowRequestsCommandHandler(IWorkflowEngine engine, ICurrentEmployeeResolver employeeResolver) { _engine = engine; _employeeResolver = employeeResolver; }
+
+    public async Task<BulkApprovalResult> Handle(BulkApproveWorkflowRequestsCommand request, CancellationToken ct)
+    {
+        var employeeId = await _employeeResolver.GetCurrentEmployeeIdAsync(ct);
+        var failures = new List<BulkApprovalFailure>();
+        var succeeded = 0;
+
+        foreach (var id in request.WorkflowRequestIds)
+        {
+            try
+            {
+                await _engine.ApproveCurrentStepAsync(id, employeeId, request.Comment, ct);
+                succeeded++;
+            }
+            catch (Exception ex) when (ex is NotFoundException or ForbiddenException or ConflictException)
+            {
+                failures.Add(new BulkApprovalFailure(id, ex.Message));
+            }
+        }
+
+        return new BulkApprovalResult(request.WorkflowRequestIds.Count, succeeded, failures);
+    }
+}
+
+public class BulkRejectWorkflowRequestsCommandHandler : IRequestHandler<BulkRejectWorkflowRequestsCommand, BulkApprovalResult>
+{
+    private readonly IWorkflowEngine _engine; private readonly ICurrentEmployeeResolver _employeeResolver;
+    public BulkRejectWorkflowRequestsCommandHandler(IWorkflowEngine engine, ICurrentEmployeeResolver employeeResolver) { _engine = engine; _employeeResolver = employeeResolver; }
+
+    public async Task<BulkApprovalResult> Handle(BulkRejectWorkflowRequestsCommand request, CancellationToken ct)
+    {
+        var employeeId = await _employeeResolver.GetCurrentEmployeeIdAsync(ct);
+        var failures = new List<BulkApprovalFailure>();
+        var succeeded = 0;
+
+        foreach (var id in request.WorkflowRequestIds)
+        {
+            try
+            {
+                await _engine.RejectCurrentStepAsync(id, employeeId, request.Comment, ct);
+                succeeded++;
+            }
+            catch (Exception ex) when (ex is NotFoundException or ForbiddenException or ConflictException)
+            {
+                failures.Add(new BulkApprovalFailure(id, ex.Message));
+            }
+        }
+
+        return new BulkApprovalResult(request.WorkflowRequestIds.Count, succeeded, failures);
+    }
+}
+
 public class RejectWorkflowRequestCommandHandler : IRequestHandler<RejectWorkflowRequestCommand>
 {
     private readonly IWorkflowEngine _engine; private readonly ICurrentEmployeeResolver _employeeResolver;
