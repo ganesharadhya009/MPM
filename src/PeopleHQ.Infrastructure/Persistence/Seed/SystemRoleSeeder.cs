@@ -30,6 +30,7 @@ public static class SystemRoleSeeder
             Permissions.WorkflowApprove, Permissions.WorkflowChainRuleWrite,
             Permissions.ReportRead, Permissions.AuditLogRead,
             Permissions.DataExportRead, Permissions.DataErasureWrite,
+            Permissions.ESignatureRequestWrite, Permissions.ESignatureSign,
             Permissions.SurveyWrite, Permissions.AssetWrite, Permissions.HelpdeskTicketWrite, Permissions.HelpdeskTicketManage, Permissions.AnnouncementWrite, Permissions.AnnouncementRead,
             Permissions.CustomFieldDefinitionWrite, Permissions.CustomFieldValueWrite, Permissions.BulkImportWrite,
             Permissions.OkrCycleWrite,
@@ -53,6 +54,7 @@ public static class SystemRoleSeeder
             Permissions.SurveyRespond, Permissions.HelpdeskTicketWrite, Permissions.AnnouncementRead,
             Permissions.DashboardRead,
             Permissions.OffboardingTaskRead, Permissions.OffboardingTaskWrite,
+            Permissions.ESignatureSign,
         },
         ["Employee"] = new[]
         {
@@ -66,6 +68,7 @@ public static class SystemRoleSeeder
             Permissions.HrProcessRequestWrite,
             Permissions.SurveyRespond, Permissions.HelpdeskTicketWrite, Permissions.AnnouncementRead,
             Permissions.DashboardRead,
+            Permissions.ESignatureSign,
         },
         ["Recruiter"] = new[]
         {

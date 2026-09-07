@@ -8,6 +8,7 @@ using PeopleHQ.Domain.Billing;
 using PeopleHQ.Domain.Dashboards;
 using PeopleHQ.Domain.Employees;
 using PeopleHQ.Domain.Engagement;
+using PeopleHQ.Domain.ESignature;
 using PeopleHQ.Domain.Identity;
 using PeopleHQ.Domain.Integrations;
 using PeopleHQ.Domain.Leave;
@@ -141,6 +142,7 @@ public class AppDbContext : IdentityUserContext<AppUser, Guid>
     // Integrations (API keys + webhooks)
     public DbSet<SsoConfiguration> SsoConfigurations => Set<SsoConfiguration>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<ESignatureRequest> ESignatureRequests => Set<ESignatureRequest>();
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
     public DbSet<WebhookSubscription> WebhookSubscriptions => Set<WebhookSubscription>();
     public DbSet<WebhookDelivery> WebhookDeliveries => Set<WebhookDelivery>();

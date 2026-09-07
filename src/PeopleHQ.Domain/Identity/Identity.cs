@@ -177,4 +177,8 @@ public static class Permissions
     // "Most needed options" #7: audit log + data export/deletion center
     public const string DataExportRead = "dataexport.read";
     public const string DataErasureWrite = "dataerasure.write";
+
+    // "Most needed options" #1: document e-signature
+    public const string ESignatureRequestWrite = "esignaturerequest.write";
+    public const string ESignatureSign = "esignature.sign";
 }
