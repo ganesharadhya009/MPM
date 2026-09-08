@@ -181,4 +181,10 @@ public static class Permissions
     // "Most needed options" #1: document e-signature
     public const string ESignatureRequestWrite = "esignaturerequest.write";
     public const string ESignatureSign = "esignature.sign";
+
+    // Appraisal cycles (Phase 2+)
+    public const string AppraisalTemplateWrite = "appraisaltemplate.write";
+    public const string AppraisalCycleWrite = "appraisalcycle.write";
+    public const string AppraisalReviewWrite = "appraisalreview.write";
+    public const string AppraisalReviewManage = "appraisalreview.manage";
 }

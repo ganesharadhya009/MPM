@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using PeopleHQ.Application.Common.Interfaces;
+using PeopleHQ.Domain.Appraisal;
 using PeopleHQ.Domain.Attendance;
 using PeopleHQ.Domain.Auditing;
 using PeopleHQ.Domain.Billing;
@@ -143,6 +144,9 @@ public class AppDbContext : IdentityUserContext<AppUser, Guid>
     public DbSet<SsoConfiguration> SsoConfigurations => Set<SsoConfiguration>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<ESignatureRequest> ESignatureRequests => Set<ESignatureRequest>();
+    public DbSet<AppraisalReviewTemplate> AppraisalReviewTemplates => Set<AppraisalReviewTemplate>();
+    public DbSet<AppraisalCycle> AppraisalCycles => Set<AppraisalCycle>();
+    public DbSet<AppraisalReview> AppraisalReviews => Set<AppraisalReview>();
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
     public DbSet<WebhookSubscription> WebhookSubscriptions => Set<WebhookSubscription>();
     public DbSet<WebhookDelivery> WebhookDeliveries => Set<WebhookDelivery>();
